@@ -1,0 +1,15 @@
+---
+project_name: sensu-jira-handler
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+    binary: bin/sensu-jira-handler
+snapshot:
+  name_template: "{{ .Tag }}"
+checksum:
+  name_template: 'checksums.txt'
