@@ -2,13 +2,15 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
-	"github.com/sensu-community/sensu-plugin-sdk/sensu"
-	corev2 "github.com/sensu/sensu-go/api/core/v2"
-	"gopkg.in/andygrunwald/go-jira.v1"
 	"os"
 	"text/template"
+
+	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	"github.com/sensu-community/sensu-plugin-sdk/sensu"
+	corev2 "github.com/sensu/sensu-go/api/core/v2"
 )
 
 type HandlerConfig struct {
@@ -145,13 +147,20 @@ func checkArgs(_ *corev2.Event) error {
 func sendMessage(event *corev2.Event) error {
 	auth := jira.BasicAuthTransport{
 		Username: config.jiraUser,
-		Password: config.jiraPassword,
+		APIToken: config.jiraPassword,
 	}
 
-	client, err := jira.NewClient(auth.Client(), config.jiraUrl)
+	// client, err := jira.NewClient(auth.Client(), config.jiraUrl)
+	client, err := jira.NewClient(config.jiraUrl, auth.Client())
 	if err != nil {
 		exitOnErr(err)
 	}
+
+	u, _, err := client.User.GetCurrentUser(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Successfully logged in: %v\n", u.EmailAddress)
 
 	var project bytes.Buffer
 	projectTmpl, err := template.New("project").Parse(config.jiraProject)
@@ -189,7 +198,7 @@ func sendMessage(event *corev2.Event) error {
 		exitOnErr(err)
 	}
 
-	_, _, err = client.Issue.Create(&jira.Issue{
+	_, _, err = client.Issue.Create(context.Background(), &jira.Issue{
 		Fields: &jira.IssueFields{
 			Type: jira.IssueType{
 				Name: issueType.String(),
